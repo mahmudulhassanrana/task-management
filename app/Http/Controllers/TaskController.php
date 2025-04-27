@@ -3,74 +3,50 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class TaskController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+
     public function index()
     {
         return Inertia::render('Tasks/Index', [
-            'tasks' => auth()->user()->tasks()->latest()->paginate(15),
-            'userName' =>auth()->user()->name
+            'tasks' => Task::with('project')->orderBy('priority', 'asc')->get(),
+            'projects' => Project::orderBy('priority', 'asc')->get()
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'body' => 'required|string',
+            'project_id' => 'required',
             'status' => 'in:pending,in_progress,completed',
-            'priority' => 'in:low,medium,high',
             'due_date' => 'nullable|date',
         ]);
 
-        auth()->user()->tasks()->create($validated);
+        $position = Task::orderBy('priority', 'desc')->first();
+
+        if (empty($position)) {
+            $validated['priority'] = 1;
+        } else {
+            $validated['priority'] = $position['priority'] + 1;
+        }
+        Task::create($validated);
 
         return redirect()->back()->with('success', 'Task created successfully.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Task $task)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Task $task)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Task $task)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'body' => 'required|string',
             'status' => 'in:pending,in_progress,completed',
-            'priority' => 'in:low,medium,high',
+            'project_id' => 'required',
             'due_date' => 'nullable|date',
         ]);
 
@@ -79,9 +55,6 @@ class TaskController extends Controller
         return redirect()->back()->with('success', 'Task updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Task $task)
     {
         $task->delete();
@@ -94,5 +67,14 @@ class TaskController extends Controller
            'status' => 'completed'
         ]);
         return redirect()->back()->with('success', 'Task completed.');
+    }
+
+    public function reorder(Request $request)
+    {
+        $tasks = $request->all();
+        foreach($tasks as $index => $taskId) {
+            Task::where('id', $taskId)->update(['priority' => $index + 1]);
+        }
+        return response()->json(['status' => 'success']);
     }
 }
