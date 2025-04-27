@@ -33,7 +33,7 @@ A full-stack **Task Management Application** built with:
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/your-username/task-management.git
+git clone https://github.com/mahmudulhassanrana/task-management
 cd task-management
 ```
 
